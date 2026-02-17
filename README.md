@@ -6,41 +6,11 @@ The project addresses two distinct multivariate forecasting scenarios: the US da
 
 ## Project Structure
 
-* **`main_fred.ipynb`**: Experiments on US data. Focuses on time series dynamics and handling "ragged edges" (mixed publication delays).
+* **`main_fred.ipynb`**: Experiments on US data (FRED-MD) with large number of varaibles.
 * **`main_mei.ipynb`**: Experiments on OECD data. Focuses on panel structures and cross-country heterogeneity.
-* **`model/`**: Model implementations.
-* **JAX/Diffrax**: Latent Neural ODEs, Neural CDEs, RNNs.
-* **Scikit-Learn/Statsmodels**: Dynamic Factor Models (DFM), VAR, Ridge Regression, Random Forest.
-
-
+* **`model/`**: Model implementations (Latent Neural ODEs, Neural CDEs, RNNs, DFM, VAR, Ridge Regression, Random Forest).
 * **`evaluator.py`**: The evaluation engine handling Walk-Forward Validation (backtesting) and statistical hypothesis testing (Diebold-Mariano, Friedman).
 * **`dataloader.py`**: Data management pipeline ensuring strict temporal splitting to prevent look-ahead bias.
-
-## Implemented Models
-
-The framework compares state-of-the-art neural differential equations against robust linear baselines:
-
-1. **Benchmarks**: Random Walk, Autoregressive (AR) models.
-2. **Econometrics**: Vector Autoregression (VAR), Dynamic Factor Models (DFM).
-3. **Machine Learning**: Ridge Regression and Random Forest (implemented with Minnesota Prior scaling).
-4. **Deep Learning (JAX)**:
-* **Latent ODE**: Continuous-time modeling of latent dynamics.
-* **Neural CDE**: Neural Controlled Differential Equations designed to handle irregular time series.
-* **ESN**: Echo State Networks (Reservoir Computing).
-
-
-
-## Methodology
-
-The evaluation framework is designed to mimic real-time forecasting conditions:
-
-* **Walk-Forward Validation**: Models are iteratively re-trained on an expanding window basis.
-* **Metrics**: RMSE and MAE are computed per horizon and per target.
-* **Statistical Significance**:
-* **Friedman Test**: Non-parametric test to detect differences in ranking across multiple models.
-* **Diebold-Mariano Test (1995)**: Pairwise test for predictive accuracy, correcting for autocorrelation in forecast errors.
-
-
 
 ## Installation
 
