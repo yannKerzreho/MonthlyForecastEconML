@@ -12,19 +12,21 @@ from sklearn.linear_model import Ridge, LinearRegression
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestRegressor
 import numpy as np
+import copy
 
 
-def make_builder(model_cls, base_config, hook=None, **kwargs):
-    defaults = base_config.copy()
-    defaults.update(kwargs)
-
+def make_builder(model_cls, base_config, hook=None, **fixed_overrides):
     def builder(seed, config=None):
-        run_config = defaults.copy()
+        run_config = copy.deepcopy(base_config)
+        run_config.update(fixed_overrides)
         if config:
             run_config.update(config)
-        run_config['seed'] = seed
+
+        run_config["seed"] = seed
+
         if hook:
             run_config = hook(run_config, seed)
+
         return model_cls(run_config)
 
     return builder

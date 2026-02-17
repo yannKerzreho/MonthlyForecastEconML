@@ -107,7 +107,7 @@ class BaseJAXEstimator(BaseModel):
         self.window_size = config.get('window_size', 12)
         self.weight_decay = config.get('weight_decay', 1e-3)
         self.verbose = config.get('verbose', True)
-        
+        if self.verbose: print(f'weight decay = {self.weight_decay}')
         self.model = None
         self.optim = None
         self.opt_state = None
@@ -118,7 +118,7 @@ class BaseJAXEstimator(BaseModel):
             optax.clip_by_global_norm(1.0),
             optax.adamw(
                 learning_rate=self.lr,
-                weight_decay=self.weight_decay # Optax handles decoupling
+                weight_decay=self.weight_decay / self.lr# Optax handles decoupling
             )
         )
 
