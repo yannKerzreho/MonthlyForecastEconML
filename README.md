@@ -9,6 +9,8 @@ The project addresses two distinct multivariate forecasting scenarios: the US da
 * **`main_fred.ipynb`**: Experiments on US data (FRED-MD) with large number of varaibles.
 * **`main_mei.ipynb`**: Experiments on OECD data. Focuses on panel structures and cross-country heterogeneity.
 * **`model/`**: Model implementations (Latent Neural ODEs, Neural CDEs, RNNs, DFM, VAR, Ridge Regression, Random Forest).
+* **`mei/`**: Folder of the MEI dataset and its preprocessing.
+* **`fred/`**: Folder of the FRED-MD dataset and its preprocessing.
 * **`evaluator.py`**: The evaluation engine handling Walk-Forward Validation (backtesting) and statistical hypothesis testing (Diebold-Mariano, Friedman).
 * **`dataloader.py`**: Data management pipeline ensuring strict temporal splitting to prevent look-ahead bias.
 
