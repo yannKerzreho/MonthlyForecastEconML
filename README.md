@@ -59,4 +59,4 @@ evaluator.print_significance_tests(results)
 - Create a class to manage significance tests, calculate errors, etc.
 - Create a class for plots
 - Request non-standardized variables from the model
-- Let model ask the data ? Need extra horizon for DL methods like NODE to stabilize learning when horizon short ~1
+- Let the model ask for the data ? Need extra horizon for DL methods (eg NODE) to stabilize learning when horizon is short ~1
