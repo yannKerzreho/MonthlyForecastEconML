@@ -8,7 +8,7 @@ class ContinuousSplitEvaluator:
     Evaluator for Continuous Monitoring of Learning Curves across Temporal Splits.
 
     This class implements a **Sequential Block Cross-Validation** strategy specifically 
-    designed to diagnose model stability and overfitting in non-stationary environments.
+    designed to diagnose model stability and overfitting.
 
     **Methodology:**
     1.  **Temporal Partitioning:** The backtest period is divided into $N$ contiguous blocks (Splits).
