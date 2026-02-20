@@ -146,7 +146,7 @@ class ContinuousSplitEvaluator:
                 
                 # Check Interface Compliance
                 if not hasattr(model, 'train_with_monitoring'):
-                    print(f"⚠️  Model {name} missing 'train_with_monitoring' method. Skipping.")
+                    print(f"Model {name} missing 'train_with_monitoring' method. Skipping.")
                     continue
 
                 # 3. Data Preparation
@@ -160,7 +160,7 @@ class ContinuousSplitEvaluator:
                 val_bundle = self._create_validation_bundle(split, window_size)
                 
                 if val_bundle is None:
-                    print("⚠️  No validation data available for this split (insufficient history?).")
+                    print("No validation data available for this split (insufficient history?).")
                     continue
 
                 # 4. Training with Live Monitoring
