@@ -4,6 +4,8 @@ This repository contains the source code for a research project evaluating the e
 
 The project addresses two distinct multivariate forecasting scenarios: the US data (FRED-MD) and a custom panel based on international data (OECD MEI).
 
+## Results
+
 ## Project Structure
 
 * **`main_fred.ipynb`**: Experiments on US data (FRED-MD) with large number of varaibles.
