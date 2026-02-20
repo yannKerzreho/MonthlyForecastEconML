@@ -56,7 +56,7 @@ class ContinuousSplitEvaluator:
         window_size: int
     ) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """
-        Pre-computes a massive tensor bundle containing all test cases in the split.
+        Pre-computes a array bundle containing all test cases in the split.
         This allows for efficient, single-pass validation during the training loop.
 
         Args:
