@@ -6,7 +6,6 @@ import argparse
 import sys
 import pandas_datareader.data as web
 
-
 from config_data import DATA_MEI
 
 # /!\ USA in first place
