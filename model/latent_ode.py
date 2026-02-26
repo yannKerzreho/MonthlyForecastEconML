@@ -95,7 +95,7 @@ class LatentNODE(eqx.Module):
         self.n_latent = n_latent
         self.n_countries = n_countries
 
-    def __call__(self, x_seq: jnp.ndarray, country_idx: int, horizon: int, inference: bool):
+    def __call__(self, x_seq: jnp.ndarray, country_idx: int, horizon: int, inference: bool, key=None):
         """
         Args:
             x_seq: Input sequence of shape (Window, Features).
@@ -161,7 +161,4 @@ class LatentNODEModel(BaseJAXEstimator):
         )
     
     def _forward(self, model, x_batch, c_idx, horizon):
-        # BaseJAXEstimator expects this signature to handle vmap internally
-        # or we define vmap here. 
-        # Here we vmap the model call over the batch dimension.
         return jax.vmap(lambda x, c: model(x, c, horizon))(x_batch, c_idx)

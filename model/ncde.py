@@ -153,7 +153,7 @@ class NCDEtoODE(eqx.Module):
         
         self.readout = eqx.nn.Linear(n_latent, n_features, key=k_read)
     
-    def __call__(self, x_seq, country_idx, horizon, inference: bool):
+    def __call__(self, x_seq, country_idx, horizon, inference: bool, key=None):
         """
         Forward pass: Interpolate -> Encode (CDE) -> Decode (ODE) -> Project.
         

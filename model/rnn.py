@@ -1,6 +1,6 @@
 import jax
 import jax.numpy as jnp
-import jax.random as jr
+import jax.random as random
 import jax.lax as lax
 import equinox as eqx
 from model.jax_model import BaseJAXEstimator 
@@ -31,7 +31,7 @@ class RNNAutoregFull(eqx.Module):
     target_indices: jnp.ndarray
     
     def __init__(self, n_features, n_countries, target_indices, hidden_size, key, dropout:float=0.2):
-        k1, k2 = jr.split(key)
+        k1, k2 = random.split(key)
         
         # Input Dimension: D (Features) + K (Countries)
         input_size = n_features + n_countries
@@ -41,23 +41,32 @@ class RNNAutoregFull(eqx.Module):
         # Output Dimension: D (All features needed for feedback loop)
         self.readout = eqx.nn.Linear(hidden_size, n_features, key=k2)
         
+        
         self.hidden_size = hidden_size
         self.n_countries = n_countries
         self.target_indices = target_indices
         self.dropout = dropout
 
-    def __call__(self, x_history: jnp.ndarray, country_idx: int, horizon: int, inference: bool):
+    def __call__(self, x_history: jnp.ndarray, country_idx: int, horizon: int, inference: bool, key=None):
         """
         Args:
             x_history: (Window, D) Historical observation sequence.
             country_idx: Integer index for OHE.
             horizon: Forecasting steps H.
         """
-        # 1. Static Feature Construction (OHE)
+        # 1. Static Feature Construction (OHE and mask for dropout)
         # Construct OHE vector on-the-fly for batching compatibility
         ohe_vec = jnp.zeros(self.n_countries)
         ohe_vec = ohe_vec.at[country_idx].set(1.0)
         
+        # We generate one mask for the hidden state to be used throughout the sequence
+        if not inference and key is not None:
+            mask = random.bernoulli(key, 1 - self.dropout_rate, (self.hidden_size,))
+            # Scale by (1/1-p) to keep expectations consistent (Standard Dropout)
+            mask = mask / (1 - self.dropout_rate)
+        else:
+            mask = jnp.ones((self.hidden_size,))
+
         # 2. Encoding Phase (Warmup)
         # Condition the hidden state h on the entire history window
         h = jnp.zeros((self.hidden_size,))
@@ -66,6 +75,7 @@ class RNNAutoregFull(eqx.Module):
         def encoder_step(carrier, x_t):
             x_in = jnp.concatenate([x_t, ohe_vec])
             h_next = self.rnn(x_in, carrier)
+            h_next = h_next * mask
             return h_next, None
 
         h_final, _ = lax.scan(encoder_step, h, x_history)
@@ -82,6 +92,7 @@ class RNNAutoregFull(eqx.Module):
             
             # Update State
             h_next = self.rnn(gru_input, h_prev)
+            h_next = h_next * mask
             
             # Predict Full Feature Vector (D,)
             x_next_pred = self.readout(h_next)

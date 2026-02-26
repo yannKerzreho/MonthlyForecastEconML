@@ -1,7 +1,7 @@
 from abc import abstractmethod
 import jax
 import jax.numpy as jnp
-import jax.random as jr
+import jax.random as random
 import equinox as eqx
 import optax
 import numpy as np
@@ -48,7 +48,8 @@ def make_step(
     c_idx: jnp.ndarray, 
     optim: optax.GradientTransformation, 
     horizon: int, 
-    rho: float
+    rho: float,
+    key,
 ) -> Tuple[eqx.Module, optax.OptState, jnp.ndarray]:
     """
     Executes a single optimization step (Forward -> Backward -> Update).
@@ -58,7 +59,7 @@ def make_step(
     crashes in `optax` updates.
     """
     # 1. Compute Gradients
-    loss_val, grads = eqx.filter_value_and_grad(loss_fn)(model, x, y, c_idx, horizon, rho, False)
+    loss_val, grads = eqx.filter_value_and_grad(loss_fn)(model, x, y, c_idx, horizon, rho, False, key)
     
     # 2. Filter Parameters
     # Extract only differentiable (inexact) arrays for the optimizer
@@ -77,7 +78,7 @@ def make_step(
 @eqx.filter_jit
 def evaluate_batch_loss(model, x, y, c_idx, horizon, rho):
     """Computes TWMSE on a validation batch without gradient tracking."""
-    preds = jax.vmap(lambda _x, _c: model(_x, _c, horizon, True))(x, c_idx)
+    preds = jax.vmap(lambda _x, _c: model(_x, _c, horizon, True, None))(x, c_idx)
     weights = rho ** jnp.arange(horizon)
     weights = weights[None, :, None]
     return jnp.mean(((preds - y) ** 2) * weights)
@@ -85,7 +86,7 @@ def evaluate_batch_loss(model, x, y, c_idx, horizon, rho):
 @eqx.filter_jit
 def predict_batch(model, x_batch, c_idx_batch, horizon):
     """Inference wrapper for batch prediction."""
-    return jax.vmap(lambda x, c: model(x, c, horizon, True))(x_batch, c_idx_batch)
+    return jax.vmap(lambda x, c: model(x, c, horizon, True, None))(x_batch, c_idx_batch)
 
 class BaseJAXEstimator(BaseModel):
     """
@@ -101,6 +102,7 @@ class BaseJAXEstimator(BaseModel):
         super().__init__(config)
         s = config.get('seed')
         self.seed = int(s) if s is not None else 42
+        self.training_key = random.key(self.seed)
         self.rho = config.get('rho', 0.9)
         self.lr = config.get('learning_rate', 1e-3)
         self.epochs = config.get('epochs', 100)
@@ -133,7 +135,7 @@ class BaseJAXEstimator(BaseModel):
     def _ensure_model_initialized(self, n_features, n_countries, target_indices):
         """Lazy initialization of Model and Optimizer state."""
         if self.model is None:
-            key = jr.PRNGKey(self.seed)
+            key = random.key(self.seed)
             self.model = self.build_model(key, n_features, n_countries, target_indices)
             
             self.optim = self._create_optimizer()
@@ -146,7 +148,7 @@ class BaseJAXEstimator(BaseModel):
 
     def train_and_predict(self, data: Dict, horizon: int, train: bool = True) -> Tuple[np.ndarray, Dict]:
         loader = JAXDataLoader(data, self.window_size, horizon, self.batch_size)
-        
+        self.training_key, key = random.split(self.training_key)
         n_features = loader.n_features
         n_targets = loader.n_targets
         countries = data['meta']['countries']
@@ -166,11 +168,12 @@ class BaseJAXEstimator(BaseModel):
 
             if train:
                 for epoch in range(self.epochs):
+                    key, step_key = random.split(key)
                     epoch_losses = []
                     for x_b, y_b, c_b in loader:
                         self.model, self.opt_state, l = make_step(
                             self.model, self.opt_state, x_b, y_b, c_b, 
-                            self.optim, horizon, self.rho
+                            self.optim, horizon, self.rho, False, step_key
                         )
                         epoch_losses.append(float(l))
                     
@@ -207,13 +210,14 @@ class BaseJAXEstimator(BaseModel):
         train_data: Dict, 
         val_bundle: Tuple[np.ndarray, np.ndarray, np.ndarray], 
         horizon: int,
-        eval_frequency: int = 10
+        eval_frequency: int = 10,
     ) -> Dict:
         """
         Extended training loop with validation monitoring.
         Returns a history dictionary containing loss curves.
         """
         loader = JAXDataLoader(train_data, self.window_size, horizon, self.batch_size)
+        self.training_key, key = random.split(self.training_key)
         
         n_features = loader.n_features
         feature_cols = train_data['meta']['features']
@@ -232,11 +236,12 @@ class BaseJAXEstimator(BaseModel):
             print(f"[{self.__class__.__name__}] Monitoring Train Start...")
         
         for epoch in range(self.epochs):
+            key, step_key = random.split(key)
             batch_losses = []
             for x_b, y_b, c_b in loader:
                 self.model, self.opt_state, l = make_step(
                     self.model, self.opt_state, x_b, y_b, c_b, 
-                    self.optim, horizon, self.rho
+                    self.optim, horizon, self.rho, False, step_key
                 )
                 batch_losses.append(float(l))
             
