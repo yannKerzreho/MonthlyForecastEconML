@@ -95,7 +95,7 @@ class LatentNODE(eqx.Module):
         self.n_latent = n_latent
         self.n_countries = n_countries
 
-    def __call__(self, x_seq: jnp.ndarray, country_idx: int, horizon: int):
+    def __call__(self, x_seq: jnp.ndarray, country_idx: int, horizon: int, inference: bool):
         """
         Args:
             x_seq: Input sequence of shape (Window, Features).

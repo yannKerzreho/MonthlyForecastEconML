@@ -30,7 +30,7 @@ class RNNAutoregFull(eqx.Module):
     n_countries: int
     target_indices: jnp.ndarray
     
-    def __init__(self, n_features, n_countries, target_indices, hidden_size, key):
+    def __init__(self, n_features, n_countries, target_indices, hidden_size, key, dropout:float=0.2):
         k1, k2 = jr.split(key)
         
         # Input Dimension: D (Features) + K (Countries)
@@ -44,8 +44,9 @@ class RNNAutoregFull(eqx.Module):
         self.hidden_size = hidden_size
         self.n_countries = n_countries
         self.target_indices = target_indices
+        self.dropout = dropout
 
-    def __call__(self, x_history: jnp.ndarray, country_idx: int, horizon: int):
+    def __call__(self, x_history: jnp.ndarray, country_idx: int, horizon: int, inference: bool):
         """
         Args:
             x_history: (Window, D) Historical observation sequence.

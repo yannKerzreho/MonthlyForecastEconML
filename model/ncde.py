@@ -5,10 +5,8 @@ import diffrax
 import equinox as eqx
 from model.jax_model import BaseJAXEstimator
 
-# ============================================================================
-# 1. VECTOR FIELDS
-# ============================================================================
 
+# 1. VECTOR FIELDS
 class ControlField(eqx.Module):
     """
     Parameterizes the Controlled Vector Field $f_\theta(z(t))$.
@@ -95,10 +93,7 @@ class DynamicsField(eqx.Module):
         return self.mlp(z_context)
 
 
-# ============================================================================
 # 2. MODEL ARCHITECTURE
-# ============================================================================
-
 class NCDEtoODE(eqx.Module):
     """
     Neural CDE Encoder-Decoder Architecture.
@@ -138,7 +133,6 @@ class NCDEtoODE(eqx.Module):
         self.n_countries = n_countries
         self.target_indices = target_indices
         
-        # === CDE ENCODER (Driven by Data) ===
         # Input to MLP: Latent State + Country Embedding
         cde_input_dim = n_latent + n_countries
         self.cde_func = ControlField(
@@ -149,7 +143,6 @@ class NCDEtoODE(eqx.Module):
             key=k_cde
         )
         
-        # === ODE DECODER (Autonomous) ===
         ode_input_dim = n_latent + n_countries
         self.ode_func = DynamicsField(
             input_dim=ode_input_dim,
@@ -158,10 +151,9 @@ class NCDEtoODE(eqx.Module):
             key=k_ode
         )
         
-        # === READOUT ===
         self.readout = eqx.nn.Linear(n_latent, n_features, key=k_read)
     
-    def __call__(self, x_seq, country_idx, horizon):
+    def __call__(self, x_seq, country_idx, horizon, inference: bool):
         """
         Forward pass: Interpolate -> Encode (CDE) -> Decode (ODE) -> Project.
         

@@ -16,7 +16,8 @@ def loss_fn(
     y: jnp.ndarray, 
     c_idx: jnp.ndarray, 
     horizon: int, 
-    rho: float
+    rho: float,
+    inference: bool
 ) -> jnp.ndarray:
     """
     Computes the Temporally Weighted Mean Squared Error (TWMSE).
@@ -30,7 +31,7 @@ def loss_fn(
     - $B$ is the batch size.
     """
     # Vectorize model application over the batch
-    preds = jax.vmap(lambda _x, _c: model(_x, _c, horizon))(x, c_idx)
+    preds = jax.vmap(lambda _x, _c: model(_x, _c, horizon, inference))(x, c_idx)
     
     # Temporal weighting vector: [1, rho, rho^2, ...]
     weights = rho ** jnp.arange(horizon)
@@ -57,7 +58,7 @@ def make_step(
     crashes in `optax` updates.
     """
     # 1. Compute Gradients
-    loss_val, grads = eqx.filter_value_and_grad(loss_fn)(model, x, y, c_idx, horizon, rho)
+    loss_val, grads = eqx.filter_value_and_grad(loss_fn)(model, x, y, c_idx, horizon, rho, False)
     
     # 2. Filter Parameters
     # Extract only differentiable (inexact) arrays for the optimizer
@@ -76,7 +77,7 @@ def make_step(
 @eqx.filter_jit
 def evaluate_batch_loss(model, x, y, c_idx, horizon, rho):
     """Computes TWMSE on a validation batch without gradient tracking."""
-    preds = jax.vmap(lambda _x, _c: model(_x, _c, horizon))(x, c_idx)
+    preds = jax.vmap(lambda _x, _c: model(_x, _c, horizon, True))(x, c_idx)
     weights = rho ** jnp.arange(horizon)
     weights = weights[None, :, None]
     return jnp.mean(((preds - y) ** 2) * weights)
@@ -84,7 +85,7 @@ def evaluate_batch_loss(model, x, y, c_idx, horizon, rho):
 @eqx.filter_jit
 def predict_batch(model, x_batch, c_idx_batch, horizon):
     """Inference wrapper for batch prediction."""
-    return jax.vmap(lambda x, c: model(x, c, horizon))(x_batch, c_idx_batch)
+    return jax.vmap(lambda x, c: model(x, c, horizon, True))(x_batch, c_idx_batch)
 
 class BaseJAXEstimator(BaseModel):
     """
