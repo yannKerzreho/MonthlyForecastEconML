@@ -81,7 +81,8 @@ class LatentNODE(eqx.Module):
         n_latent: int, 
         width: int, 
         depth: int, 
-        key
+        key,
+        dropout:float=0.2
     ):
         k1, k2, k3 = random.split(key, 3)
         
@@ -164,7 +165,8 @@ class LatentNODEModel(BaseJAXEstimator):
             n_countries=n_countries,
             n_latent=self.config.get('n_latent', 32),
             depth=self.config.get('depth', 2),
-            key=key
+            key=key,
+            dropout=self.config.get('dropout', 0.2)
         )
     
     def _forward(self, model, x_batch, c_idx, horizon):

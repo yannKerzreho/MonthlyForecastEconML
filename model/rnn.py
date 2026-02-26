@@ -119,7 +119,8 @@ class RNNModel(BaseJAXEstimator):
             n_countries=n_countries,
             target_indices=target_indices,
             hidden_size=self.config.get('hidden_size', 64),
-            key=key
+            key=key,
+            dropout=self.config.get('dropout', 0.2)
         )
     
     def _forward(self, model, x_batch, c_idx, horizon):
