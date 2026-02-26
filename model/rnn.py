@@ -29,8 +29,9 @@ class RNNAutoregFull(eqx.Module):
     hidden_size: int
     n_countries: int
     target_indices: jnp.ndarray
-    
-    def __init__(self, n_features, n_countries, target_indices, hidden_size, key, dropout:float=0.2):
+    dropout: float
+
+    def __init__(self, n_features, n_countries, target_indices, hidden_size, key, dropout):
         k1, k2 = random.split(key)
         
         # Input Dimension: D (Features) + K (Countries)
@@ -61,9 +62,9 @@ class RNNAutoregFull(eqx.Module):
         
         # We generate one mask for the hidden state to be used throughout the sequence
         if not inference and key is not None:
-            mask = random.bernoulli(key, 1 - self.dropout_rate, (self.hidden_size,))
+            mask = random.bernoulli(key, 1 - self.dropout, (self.hidden_size,))
             # Scale by (1/1-p) to keep expectations consistent (Standard Dropout)
-            mask = mask / (1 - self.dropout_rate)
+            mask = mask / (1 - self.dropout)
         else:
             mask = jnp.ones((self.hidden_size,))
 
@@ -120,7 +121,7 @@ class RNNModel(BaseJAXEstimator):
             target_indices=target_indices,
             hidden_size=self.config.get('hidden_size', 64),
             key=key,
-            dropout=self.config.get('dropout', 0.2)
+            dropout=self.config.get('dropout', 0.)
         )
     
     def _forward(self, model, x_batch, c_idx, horizon):

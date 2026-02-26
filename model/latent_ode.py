@@ -72,7 +72,8 @@ class LatentNODE(eqx.Module):
     decoder: eqx.nn.Linear
     n_latent: int
     n_countries: int
-    
+    dropout: float
+
     def __init__(
         self, 
         n_features: int, 
@@ -82,7 +83,7 @@ class LatentNODE(eqx.Module):
         width: int, 
         depth: int, 
         key,
-        dropout:float=0.2
+        dropout
     ):
         k1, k2, k3 = random.split(key, 3)
         
@@ -95,6 +96,7 @@ class LatentNODE(eqx.Module):
         
         self.n_latent = n_latent
         self.n_countries = n_countries
+        self.dropout = dropout
 
     def __call__(self, x_seq: jnp.ndarray, country_idx: int, horizon: int, inference: bool, key=None):
         """
@@ -110,9 +112,9 @@ class LatentNODE(eqx.Module):
 
         # We generate one mask for the hidden state to be used throughout the sequence
         if not inference and key is not None:
-            mask = random.bernoulli(key, 1 - self.dropout_rate, (self.n_latent,))
+            mask = random.bernoulli(key, 1 - self.dropout, (self.n_latent,))
             # Scale by (1/1-p) to keep expectations consistent (Standard Dropout)
-            mask = mask / (1 - self.dropout_rate)
+            mask = mask / (1 - self.dropout)
         else:
             mask = jnp.ones((self.n_latent,))
 
@@ -166,7 +168,7 @@ class LatentNODEModel(BaseJAXEstimator):
             n_latent=self.config.get('n_latent', 32),
             depth=self.config.get('depth', 2),
             key=key,
-            dropout=self.config.get('dropout', 0.2)
+            dropout=self.config.get('dropout', 0.)
         )
     
     def _forward(self, model, x_batch, c_idx, horizon):
