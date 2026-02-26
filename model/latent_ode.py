@@ -1,6 +1,6 @@
 import jax
 import jax.numpy as jnp
-import jax.random as jr
+import jax.random as random
 import diffrax
 import equinox as eqx
 from typing import List, Any
@@ -19,7 +19,7 @@ class NeuralField(eqx.Module):
     layers: List[eqx.Module]
 
     def __init__(self, n_latent: int, width: int, depth: int, key):
-        keys = jr.split(key, depth + 1)
+        keys = random.split(key, depth + 1)
         
         # Input Layer
         self.layers = [eqx.nn.Linear(n_latent, width, key=keys[0])]
@@ -83,7 +83,7 @@ class LatentNODE(eqx.Module):
         depth: int, 
         key
     ):
-        k1, k2, k3 = jr.split(key, 3)
+        k1, k2, k3 = random.split(key, 3)
         
         # Encoder Input: Features + Country One-Hot Encoding
         total_input_dim = n_features + n_countries
@@ -106,7 +106,15 @@ class LatentNODE(eqx.Module):
         # We perform OHE on-the-fly to handle batching cleanly in JAX
         ohe_vec = jnp.zeros(self.n_countries)
         ohe_vec = ohe_vec.at[country_idx].set(1.0)
-        
+
+        # We generate one mask for the hidden state to be used throughout the sequence
+        if not inference and key is not None:
+            mask = random.bernoulli(key, 1 - self.dropout_rate, (self.n_latent,))
+            # Scale by (1/1-p) to keep expectations consistent (Standard Dropout)
+            mask = mask / (1 - self.dropout_rate)
+        else:
+            mask = jnp.ones((self.n_latent,))
+
         # 2. Encoding (Recurrent Pass)
         # Initializes hidden state and consumes the sequence
         h = jnp.zeros((self.n_latent,))
@@ -115,7 +123,7 @@ class LatentNODE(eqx.Module):
             # Concatenate dynamic features with static country encoding
             x_in = jnp.concatenate([x_t, ohe_vec])
             h_next = self.encoder(x_in, carry)
-            return h_next, None
+            return h_next * mask, None
 
         # scan is more efficient than a python loop for RNNs in JAX
         h_final, _ = jax.lax.scan(scan_fn, h, x_seq)
@@ -139,7 +147,7 @@ class LatentNODE(eqx.Module):
         # 4. Decoding
         # Map the trajectory h(1)...h(H) to predictions
         # sol.ys has shape (Horizon, Latent)
-        return jax.vmap(self.decoder)(sol.ys)
+        return jax.vmap(self.decoder)(sol.ys * mask)
 
 
 class LatentNODEModel(BaseJAXEstimator):
@@ -155,7 +163,6 @@ class LatentNODEModel(BaseJAXEstimator):
             n_targets=n_targets,
             n_countries=n_countries,
             n_latent=self.config.get('n_latent', 32),
-            width=self.config.get('hidden_size', 64),
             depth=self.config.get('depth', 2),
             key=key
         )

@@ -17,7 +17,8 @@ def loss_fn(
     c_idx: jnp.ndarray, 
     horizon: int, 
     rho: float,
-    inference: bool
+    inference: bool,
+    key
 ) -> jnp.ndarray:
     """
     Computes the Temporally Weighted Mean Squared Error (TWMSE).
@@ -31,7 +32,7 @@ def loss_fn(
     - $B$ is the batch size.
     """
     # Vectorize model application over the batch
-    preds = jax.vmap(lambda _x, _c: model(_x, _c, horizon, inference))(x, c_idx)
+    preds = jax.vmap(lambda _x, _c: model(_x, _c, horizon, inference, key))(x, c_idx)
     
     # Temporal weighting vector: [1, rho, rho^2, ...]
     weights = rho ** jnp.arange(horizon)
@@ -173,7 +174,7 @@ class BaseJAXEstimator(BaseModel):
                     for x_b, y_b, c_b in loader:
                         self.model, self.opt_state, l = make_step(
                             self.model, self.opt_state, x_b, y_b, c_b, 
-                            self.optim, horizon, self.rho, False, step_key
+                            self.optim, horizon, self.rho, step_key
                         )
                         epoch_losses.append(float(l))
                     
@@ -218,7 +219,7 @@ class BaseJAXEstimator(BaseModel):
         """
         loader = JAXDataLoader(train_data, self.window_size, horizon, self.batch_size)
         self.training_key, key = random.split(self.training_key)
-        
+
         n_features = loader.n_features
         feature_cols = train_data['meta']['features']
         target_cols = train_data['meta']['target_cols']
@@ -241,7 +242,7 @@ class BaseJAXEstimator(BaseModel):
             for x_b, y_b, c_b in loader:
                 self.model, self.opt_state, l = make_step(
                     self.model, self.opt_state, x_b, y_b, c_b, 
-                    self.optim, horizon, self.rho, False, step_key
+                    self.optim, horizon, self.rho, step_key
                 )
                 batch_losses.append(float(l))
             
